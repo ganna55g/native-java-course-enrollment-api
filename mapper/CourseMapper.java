@@ -15,6 +15,7 @@ public class CourseMapper {
         course.setDescription(request.getDescription());
         course.setPrice(request.getPrice());
         course.setCapacity(request.getCapacity());
+        course.setStatus(request.getStatus());
 
         return course;
     }

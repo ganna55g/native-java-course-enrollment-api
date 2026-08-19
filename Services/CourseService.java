@@ -29,17 +29,28 @@ public class CourseService {
             throw new IllegalArgumentException("Title is required");
         }
 
-        if (request.getDescription() == null || request.getDescription().isEmpty()) {
+        if (request.getDescription() == null
+                || request.getDescription().isEmpty()) {
             throw new IllegalArgumentException("Description is required");
         }
 
-        if (request.getPrice() == null ||
-                request.getPrice().compareTo(java.math.BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Price must be greater than zero");
+        if (request.getPrice() == null
+                || request.getPrice().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException(
+                    "Price must be greater than zero"
+            );
         }
 
         if (request.getCapacity() <= 0) {
-            throw new IllegalArgumentException("Capacity must be greater than zero");
+            throw new IllegalArgumentException(
+                    "Capacity must be greater than zero"
+            );
+        }
+
+        if (request.getStatus() == null) {
+            throw new IllegalArgumentException(
+                    "Status is required"
+            );
         }
 
         Course course = courseMapper.toCourse(request);
@@ -90,18 +101,22 @@ public class CourseService {
             throw new IllegalArgumentException("Title is required");
         }
 
-        if (request.getDescription() == null ||
-                request.getDescription().isEmpty()) {
+        if (request.getDescription() == null
+                || request.getDescription().isEmpty()) {
             throw new IllegalArgumentException("Description is required");
         }
 
-        if (request.getPrice() == null ||
-                request.getPrice().compareTo(java.math.BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Price must be greater than zero");
+        if (request.getPrice() == null
+                || request.getPrice().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException(
+                    "Price must be greater than zero"
+            );
         }
 
         if (request.getCapacity() <= 0) {
-            throw new IllegalArgumentException("Capacity must be greater than zero");
+            throw new IllegalArgumentException(
+                    "Capacity must be greater than zero"
+            );
         }
 
         courseMapper.updateCourse(course, request);
