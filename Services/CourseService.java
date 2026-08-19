@@ -8,8 +8,12 @@ import com.coursemanagement.mapper.CourseMapper;
 import com.coursemanagement.model.Course;
 import com.coursemanagement.repository.interfaces.CourseRepository;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class CourseService {
@@ -19,39 +23,20 @@ public class CourseService {
 
     public CourseService(CourseRepository courseRepository,
                          CourseMapper courseMapper) {
+
         this.courseRepository = courseRepository;
         this.courseMapper = courseMapper;
     }
 
     public CourseResponse createCourse(CreateCourseRequest request) {
 
-        if (request.getTitle() == null || request.getTitle().isEmpty()) {
-            throw new IllegalArgumentException("Title is required");
-        }
-
-        if (request.getDescription() == null
-                || request.getDescription().isEmpty()) {
-            throw new IllegalArgumentException("Description is required");
-        }
-
-        if (request.getPrice() == null
-                || request.getPrice().compareTo(java.math.BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException(
-                    "Price must be greater than zero"
-            );
-        }
-
-        if (request.getCapacity() <= 0) {
-            throw new IllegalArgumentException(
-                    "Capacity must be greater than zero"
-            );
-        }
-
-        if (request.getStatus() == null) {
-            throw new IllegalArgumentException(
-                    "Status is required"
-            );
-        }
+        validateCourseRequest(
+                request.getTitle(),
+                request.getDescription(),
+                request.getPrice(),
+                request.getCapacity(),
+                request.getStatus()
+        );
 
         Course course = courseMapper.toCourse(request);
 
@@ -90,34 +75,21 @@ public class CourseService {
         return responses;
     }
 
-    public CourseResponse replaceCourse(String id,
-                                        UpdateCourseRequest request) {
+    public CourseResponse replaceCourse(
+            String id,
+            UpdateCourseRequest request) {
 
         Course course = courseRepository.findById(id)
                 .orElseThrow(() ->
                         new IllegalArgumentException("Course not found"));
 
-        if (request.getTitle() == null || request.getTitle().isEmpty()) {
-            throw new IllegalArgumentException("Title is required");
-        }
-
-        if (request.getDescription() == null
-                || request.getDescription().isEmpty()) {
-            throw new IllegalArgumentException("Description is required");
-        }
-
-        if (request.getPrice() == null
-                || request.getPrice().compareTo(java.math.BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException(
-                    "Price must be greater than zero"
-            );
-        }
-
-        if (request.getCapacity() <= 0) {
-            throw new IllegalArgumentException(
-                    "Capacity must be greater than zero"
-            );
-        }
+        validateCourseRequest(
+                request.getTitle(),
+                request.getDescription(),
+                request.getPrice(),
+                request.getCapacity(),
+                request.getStatus()
+        );
 
         courseMapper.updateCourse(course, request);
 
@@ -140,6 +112,10 @@ public class CourseService {
                 .orElseThrow(() ->
                         new IllegalArgumentException("Course not found"));
 
+        if (request.getStatus() == null) {
+            throw new IllegalArgumentException("Status is required");
+        }
+
         course.setStatus(request.getStatus());
         course.setUpdatedAt(LocalDateTime.now());
 
@@ -155,5 +131,154 @@ public class CourseService {
         }
 
         courseRepository.deleteById(id);
+    }
+
+    public List<CourseResponse> filterCourses(
+            String status,
+            String title,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            String sort) {
+
+        if (minPrice != null
+                && maxPrice != null
+                && minPrice.compareTo(maxPrice) > 0) {
+
+            throw new IllegalArgumentException(
+                    "minPrice cannot be greater than maxPrice"
+            );
+        }
+
+        if (status != null && !status.isEmpty()) {
+
+            try {
+                com.coursemanagement.model.CourseStatus.valueOf(
+                        status.toUpperCase()
+                );
+            } catch (IllegalArgumentException e) {
+
+                throw new IllegalArgumentException(
+                        "Invalid status"
+                );
+            }
+        }
+
+        if (sort != null && !sort.isEmpty()) {
+
+            if (!sort.equalsIgnoreCase("price,asc")
+                    && !sort.equalsIgnoreCase("price,desc")) {
+
+                throw new IllegalArgumentException(
+                        "Invalid sort parameter"
+                );
+            }
+        }
+
+        Map<String, Course> courses =
+                courseRepository.findAll();
+
+        List<Course> filteredCourses =
+                new ArrayList<>(courses.values());
+
+        if (status != null && !status.isEmpty()) {
+
+            filteredCourses.removeIf(course ->
+                    !course.getStatus()
+                            .name()
+                            .equalsIgnoreCase(status)
+            );
+        }
+
+        if (title != null && !title.isEmpty()) {
+
+            filteredCourses.removeIf(course ->
+                    !course.getTitle()
+                            .toLowerCase()
+                            .contains(title.toLowerCase())
+            );
+        }
+
+        if (minPrice != null) {
+
+            filteredCourses.removeIf(course ->
+                    course.getPrice()
+                            .compareTo(minPrice) < 0
+            );
+        }
+
+        if (maxPrice != null) {
+
+            filteredCourses.removeIf(course ->
+                    course.getPrice()
+                            .compareTo(maxPrice) > 0
+            );
+        }
+
+        if (sort != null && !sort.isEmpty()) {
+
+            if (sort.equalsIgnoreCase("price,asc")) {
+
+                filteredCourses.sort(
+                        Comparator.comparing(Course::getPrice)
+                );
+
+            } else {
+
+                filteredCourses.sort(
+                        Comparator.comparing(Course::getPrice)
+                                .reversed()
+                );
+            }
+        }
+
+        List<CourseResponse> responses =
+                new ArrayList<>();
+
+        for (Course course : filteredCourses) {
+
+            responses.add(
+                    courseMapper.toResponse(course)
+            );
+        }
+
+        return responses;
+    }
+
+    private void validateCourseRequest(
+            String title,
+            String description,
+            BigDecimal price,
+            int capacity,
+            com.coursemanagement.model.CourseStatus status) {
+
+        if (title == null || title.isEmpty()) {
+            throw new IllegalArgumentException("Title is required");
+        }
+
+        if (description == null || description.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Description is required"
+            );
+        }
+
+        if (price == null
+                || price.compareTo(BigDecimal.ZERO) <= 0) {
+
+            throw new IllegalArgumentException(
+                    "Price must be greater than zero"
+            );
+        }
+
+        if (capacity <= 0) {
+            throw new IllegalArgumentException(
+                    "Capacity must be greater than zero"
+            );
+        }
+
+        if (status == null) {
+            throw new IllegalArgumentException(
+                    "Status is required"
+            );
+        }
     }
 }

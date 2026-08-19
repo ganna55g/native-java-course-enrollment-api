@@ -20,12 +20,15 @@ public class CourseMapper {
         return course;
     }
 
-    public Course updateCourse(Course course, UpdateCourseRequest request) {
+    public Course updateCourse(
+            Course course,
+            UpdateCourseRequest request) {
 
         course.setTitle(request.getTitle());
         course.setDescription(request.getDescription());
         course.setPrice(request.getPrice());
         course.setCapacity(request.getCapacity());
+        course.setStatus(request.getStatus());
 
         return course;
     }

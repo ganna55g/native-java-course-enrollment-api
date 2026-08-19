@@ -1,8 +1,10 @@
 package com.coursemanagement.http.json;
 
 import com.coursemanagement.dto.response.CourseResponse;
+import com.coursemanagement.dto.response.EnrollmentResponse;
 import com.coursemanagement.dto.response.ErrorResponse;
 import com.coursemanagement.dto.response.FieldErrorResponse;
+import com.coursemanagement.dto.response.PaymentResponse;
 import com.coursemanagement.dto.response.StudentResponse;
 import com.coursemanagement.http.HttpUtil;
 import com.sun.net.httpserver.HttpExchange;
@@ -36,6 +38,40 @@ public class JsonUtil {
                 + "\"status\":\"" + course.getStatus() + "\","
                 + "\"createdAt\":\"" + course.getCreatedAt() + "\","
                 + "\"updatedAt\":\"" + course.getUpdatedAt() + "\""
+                + "}";
+    }
+
+    public static String enrollmentToJson(
+            EnrollmentResponse enrollment) {
+
+        return "{"
+                + "\"id\":\"" + escape(enrollment.getId()) + "\","
+                + "\"studentId\":\"" + escape(enrollment.getStudentId()) + "\","
+                + "\"courseId\":\"" + escape(enrollment.getCourseId()) + "\","
+                + "\"originalPrice\":" + enrollment.getOriginalPrice() + ","
+                + "\"discountAmount\":" + enrollment.getDiscountAmount() + ","
+                + "\"finalPrice\":" + enrollment.getFinalPrice() + ","
+                + "\"status\":\"" + enrollment.getStatus() + "\","
+                + "\"enrollmentDate\":\"" + enrollment.getEnrollmentDate() + "\""
+                + "}";
+    }
+
+    public static String paymentToJson(
+            PaymentResponse payment) {
+
+        return "{"
+                + "\"id\":\"" + escape(payment.getId()) + "\","
+                + "\"enrollmentId\":\""
+                + escape(payment.getEnrollmentId()) + "\","
+                + "\"amount\":" + payment.getAmount() + ","
+                + "\"paymentMethod\":\""
+                + payment.getPaymentMethod() + "\","
+                + "\"paymentStatus\":\""
+                + payment.getPaymentStatus() + "\","
+                + "\"transactionReference\":\""
+                + escape(payment.getTransactionReference()) + "\","
+                + "\"paymentDate\":\""
+                + payment.getPaymentDate() + "\""
                 + "}";
     }
 
@@ -81,6 +117,29 @@ public class JsonUtil {
         return json.toString();
     }
 
+    public static String enrollmentsToJson(
+            List<EnrollmentResponse> enrollments) {
+
+        StringBuilder json = new StringBuilder();
+
+        json.append("[");
+
+        for (int i = 0; i < enrollments.size(); i++) {
+
+            json.append(
+                    enrollmentToJson(enrollments.get(i))
+            );
+
+            if (i < enrollments.size() - 1) {
+                json.append(",");
+            }
+        }
+
+        json.append("]");
+
+        return json.toString();
+    }
+
     public static String errorToJson(String message) {
 
         ErrorResponse error =
@@ -102,11 +161,21 @@ public class JsonUtil {
 
         return "{"
                 + "\"field\":\""
-                + escape(error.getField())
-                + "\","
+                + escape(error.getField()) + "\","
                 + "\"message\":\""
                 + escape(error.getMessage())
                 + "\""
+                + "}";
+    }
+
+    public static String loginResponseToJson(
+            String token,
+            String role) {
+
+        return "{"
+                + "\"accessToken\":\"" + escape(token) + "\","
+                + "\"tokenType\":\"Bearer\","
+                + "\"role\":\"" + escape(role) + "\""
                 + "}";
     }
 

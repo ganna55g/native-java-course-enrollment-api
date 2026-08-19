@@ -1,5 +1,7 @@
 package com.coursemanagement.dto.request;
 
+import com.coursemanagement.model.CourseStatus;
+
 import java.math.BigDecimal;
 
 public class UpdateCourseRequest {
@@ -8,16 +10,22 @@ public class UpdateCourseRequest {
     private String description;
     private BigDecimal price;
     private int capacity;
+    private CourseStatus status;
 
     public UpdateCourseRequest() {
     }
 
-    public UpdateCourseRequest(String title, String description,
-                               BigDecimal price, int capacity) {
+    public UpdateCourseRequest(String title,
+                               String description,
+                               BigDecimal price,
+                               int capacity,
+                               CourseStatus status) {
+
         this.title = title;
         this.description = description;
         this.price = price;
         this.capacity = capacity;
+        this.status = status;
     }
 
     public String getTitle() {
@@ -50,5 +58,13 @@ public class UpdateCourseRequest {
 
     public void setCapacity(int capacity) {
         this.capacity = capacity;
+    }
+
+    public CourseStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(CourseStatus status) {
+        this.status = status;
     }
 }

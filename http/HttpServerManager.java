@@ -1,5 +1,6 @@
 package com.coursemanagement.http;
 
+import com.coursemanagement.Services.AuthenticationService;
 import com.coursemanagement.http.handler.AuthHandler;
 import com.coursemanagement.http.handler.CourseHandler;
 import com.coursemanagement.http.handler.EnrollmentHandler;
@@ -22,12 +23,13 @@ public class HttpServerManager {
     private EnrollmentHandler enrollmentHandler;
     private PaymentHandler paymentHandler;
 
-    public HttpServerManager(HealthHandler healthHandler,
-                             StudentHandler studentHandler,
-                             CourseHandler courseHandler,
-                             AuthHandler authHandler,
-                             EnrollmentHandler enrollmentHandler,
-                             PaymentHandler paymentHandler) {
+    public HttpServerManager(
+            HealthHandler healthHandler,
+            StudentHandler studentHandler,
+            CourseHandler courseHandler,
+            AuthHandler authHandler,
+            EnrollmentHandler enrollmentHandler,
+            PaymentHandler paymentHandler) {
 
         this.healthHandler = healthHandler;
         this.studentHandler = studentHandler;

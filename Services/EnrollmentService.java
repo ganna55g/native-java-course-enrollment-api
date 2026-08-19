@@ -104,4 +104,29 @@ public class EnrollmentService {
 
         return responses;
     }
+
+    public Map<String, EnrollmentResponse> findEnrollmentsByStudentId(
+            String studentId) {
+
+        Map<String, Enrollment> enrollments =
+                enrollmentRepository.findAll();
+
+        Map<String, EnrollmentResponse> responses =
+                new HashMap<>();
+
+        for (Map.Entry<String, Enrollment> entry : enrollments.entrySet()) {
+
+            Enrollment enrollment = entry.getValue();
+
+            if (enrollment.getStudentId().equals(studentId)) {
+
+                responses.put(
+                        entry.getKey(),
+                        enrollmentMapper.toResponse(enrollment)
+                );
+            }
+        }
+
+        return responses;
+    }
 }
