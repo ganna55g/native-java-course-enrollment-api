@@ -10,6 +10,7 @@ import com.coursemanagement.exception.ForbiddenException;
 import com.coursemanagement.http.HttpUtil;
 import com.coursemanagement.http.json.JsonParser;
 import com.coursemanagement.http.json.JsonUtil;
+import com.coursemanagement.model.DiscountType;
 import com.coursemanagement.model.Role;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -48,6 +49,10 @@ public class EnrollmentHandler implements HttpHandler {
 
                 handleGet(exchange, path);
 
+            } else if (method.equals("DELETE")) {
+
+                handleDelete(exchange, path);
+
             } else {
 
                 JsonUtil.sendError(
@@ -75,6 +80,18 @@ public class EnrollmentHandler implements HttpHandler {
 
         } catch (IllegalArgumentException e) {
 
+            if (e.getMessage() != null
+                    && e.getMessage().equals("Enrollment not found")) {
+
+                JsonUtil.sendError(
+                        exchange,
+                        404,
+                        e.getMessage()
+                );
+
+                return;
+            }
+
             JsonUtil.sendError(
                     exchange,
                     400,
@@ -93,12 +110,13 @@ public class EnrollmentHandler implements HttpHandler {
                 HttpUtil.readBody(exchange);
 
         if (!JsonParser.hasField(body, "studentId")
-                || !JsonParser.hasField(body, "courseId")) {
+                || !JsonParser.hasField(body, "courseId")
+                || !JsonParser.hasField(body, "discountType")) {
 
             JsonUtil.sendError(
                     exchange,
                     400,
-                    "Student ID and Course ID are required"
+                    "Student ID, Course ID and Discount Type are required"
             );
 
             return;
@@ -109,6 +127,13 @@ public class EnrollmentHandler implements HttpHandler {
 
         String courseId =
                 JsonParser.readString(body, "courseId");
+
+        DiscountType discountType =
+                JsonParser.readEnum(
+                        body,
+                        "discountType",
+                        DiscountType.class
+                );
 
         if (user.getRole() == Role.STUDENT
                 && !user.getUserId().equals(studentId)) {
@@ -121,7 +146,8 @@ public class EnrollmentHandler implements HttpHandler {
         CreateEnrollmentRequest request =
                 new CreateEnrollmentRequest(
                         studentId,
-                        courseId
+                        courseId,
+                        discountType
                 );
 
         EnrollmentResponse enrollment =
@@ -155,6 +181,54 @@ public class EnrollmentHandler implements HttpHandler {
 
             Map<String, EnrollmentResponse> enrollments =
                     enrollmentService.findAllEnrollments();
+
+            List<EnrollmentResponse> enrollmentList =
+                    new ArrayList<>(enrollments.values());
+
+            String json =
+                    JsonUtil.enrollmentsToJson(enrollmentList);
+
+            HttpUtil.sendJsonResponse(
+                    exchange,
+                    200,
+                    json
+            );
+
+            return;
+        }
+
+        if (path.startsWith("/api/students/")
+                && path.endsWith("/enrollments")) {
+
+            String studentId =
+                    path.substring(
+                            "/api/students/".length(),
+                            path.length() - "/enrollments".length()
+                    );
+
+            if (studentId.isEmpty()) {
+
+                JsonUtil.sendError(
+                        exchange,
+                        400,
+                        "Student ID is required"
+                );
+
+                return;
+            }
+
+            if (user.getRole() != Role.ADMIN
+                    && !user.getUserId().equals(studentId)) {
+
+                throw new ForbiddenException(
+                        "You are not allowed to view these enrollments"
+                );
+            }
+
+            Map<String, EnrollmentResponse> enrollments =
+                    enrollmentService.findEnrollmentsByStudentId(
+                            studentId
+                    );
 
             List<EnrollmentResponse> enrollmentList =
                     new ArrayList<>(enrollments.values());
@@ -217,6 +291,60 @@ public class EnrollmentHandler implements HttpHandler {
                 exchange,
                 404,
                 "Enrollment not found"
+        );
+    }
+
+    private void handleDelete(
+            HttpExchange exchange,
+            String path) throws IOException {
+
+        AuthenticatedUser user =
+                getAuthenticatedUser(exchange);
+
+        if (!path.startsWith("/api/enrollments/")) {
+
+            JsonUtil.sendError(
+                    exchange,
+                    404,
+                    "Enrollment not found"
+            );
+
+            return;
+        }
+
+        String id =
+                path.substring(
+                        "/api/enrollments/".length()
+                );
+
+        if (id.isEmpty()) {
+
+            JsonUtil.sendError(
+                    exchange,
+                    400,
+                    "Enrollment ID is required"
+            );
+
+            return;
+        }
+
+        EnrollmentResponse enrollment =
+                enrollmentService.findEnrollmentById(id);
+
+        if (user.getRole() != Role.ADMIN
+                && !user.getUserId()
+                .equals(enrollment.getStudentId())) {
+
+            throw new ForbiddenException(
+                    "You are not allowed to delete this enrollment"
+            );
+        }
+
+        enrollmentService.deleteEnrollment(id);
+
+        HttpUtil.sendNoBodyResponse(
+                exchange,
+                204
         );
     }
 
