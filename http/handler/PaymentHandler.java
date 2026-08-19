@@ -17,7 +17,6 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 
 public class PaymentHandler implements HttpHandler {
 
@@ -36,9 +35,14 @@ public class PaymentHandler implements HttpHandler {
     }
 
     @Override
-    public void handle(HttpExchange exchange) throws IOException {
+    public void handle(HttpExchange exchange)
+            throws IOException {
 
-        String method = HttpUtil.getMethod(exchange);
+        String method =
+                HttpUtil.getMethod(exchange);
+
+        String path =
+                HttpUtil.getPath(exchange);
 
         try {
 
@@ -53,7 +57,20 @@ public class PaymentHandler implements HttpHandler {
                 return;
             }
 
-            handlePost(exchange);
+            if (!path.startsWith(
+                    "/api/enrollments/")
+                    || !path.endsWith("/payments")) {
+
+                JsonUtil.sendError(
+                        exchange,
+                        404,
+                        "Payment endpoint not found"
+                );
+
+                return;
+            }
+
+            handlePost(exchange, path);
 
         } catch (AuthenticationException e) {
 
@@ -82,32 +99,60 @@ public class PaymentHandler implements HttpHandler {
     }
 
     private void handlePost(
-            HttpExchange exchange) throws IOException {
+            HttpExchange exchange,
+            String path) throws IOException {
 
         AuthenticatedUser user =
                 getAuthenticatedUser(exchange);
 
-        String body =
-                HttpUtil.readBody(exchange);
+        String enrollmentId =
+                path.substring(
+                        "/api/enrollments/".length(),
+                        path.length() - "/payments".length()
+                );
 
-        if (!JsonParser.hasField(body, "enrollmentId")
-                || !JsonParser.hasField(body, "amount")
-                || !JsonParser.hasField(body, "paymentMethod")) {
+        if (enrollmentId.isEmpty()) {
 
             JsonUtil.sendError(
                     exchange,
                     400,
-                    "Enrollment ID, amount and payment method are required"
+                    "Enrollment ID is required"
             );
 
             return;
         }
 
-        String enrollmentId =
-                JsonParser.readString(body, "enrollmentId");
+        EnrollmentResponse enrollment =
+                enrollmentService.findEnrollmentById(
+                        enrollmentId
+                );
 
-        BigDecimal amount =
-                JsonParser.readDecimal(body, "amount");
+        if (!user.getUserId()
+                .equals(enrollment.getStudentId())) {
+
+            throw new ForbiddenException(
+                    "You can only pay for your own enrollment"
+            );
+        }
+
+        String body =
+                HttpUtil.readBody(exchange);
+
+        if (!JsonParser.hasField(
+                body,
+                "paymentMethod")
+                || !JsonParser.hasField(
+                body,
+                "paymentReference")) {
+
+            JsonUtil.sendError(
+                    exchange,
+                    400,
+                    "Payment method and payment reference are required"
+            );
+
+            return;
+        }
 
         PaymentMethod paymentMethod =
                 JsonParser.readEnum(
@@ -116,44 +161,30 @@ public class PaymentHandler implements HttpHandler {
                         PaymentMethod.class
                 );
 
-        String transactionReference = null;
-
-        if (JsonParser.hasField(body, "transactionReference")) {
-
-            transactionReference =
-                    JsonParser.readString(
-                            body,
-                            "transactionReference"
-                    );
-        }
-
-        EnrollmentResponse enrollment =
-                enrollmentService.findEnrollmentById(enrollmentId);
-
-        if (!user.getUserId().equals(enrollment.getStudentId())) {
-
-            throw new ForbiddenException(
-                    "You can only pay for your own enrollment"
-            );
-        }
+        String paymentReference =
+                JsonParser.readString(
+                        body,
+                        "paymentReference"
+                );
 
         CreatePaymentRequest request =
                 new CreatePaymentRequest(
                         enrollmentId,
-                        amount,
                         paymentMethod,
-                        transactionReference
+                        paymentReference
                 );
 
         PaymentResponse payment =
-                paymentService.createPayment(request);
+                paymentService.createPayment(
+                        request
+                );
 
         String json =
                 JsonUtil.paymentToJson(payment);
 
         HttpUtil.sendJsonResponse(
                 exchange,
-                200,
+                201,
                 json
         );
     }
@@ -178,6 +209,8 @@ public class PaymentHandler implements HttpHandler {
         String token =
                 header.substring(7);
 
-        return authenticationService.authenticate(token);
+        return authenticationService.authenticate(
+                token
+        );
     }
 }
